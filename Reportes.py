@@ -2,11 +2,9 @@ import streamlit as st
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
-from docx import Document
-from docx.shared import Inches
-from datetime import datetime
 from io import BytesIO
+from datetime import datetime
+from fpdf import FPDF
 
 # Título de la aplicación
 st.title("Generación automática de reportes de la TRM")
@@ -87,7 +85,7 @@ df_extendido['fecha'] = pd.to_datetime(df_extendido['fecha'])
 df_extendido['year'] = df_extendido['fecha'].dt.year
 grouped = df_extendido.groupby('year')
 
-# Preparamos el gráfico
+# Preparamos el gráfico (sin mostrarlo en la app)
 plt.figure(figsize=(10, 6))
 for year, group in grouped:
     plt.scatter(group['fecha'], group['valor'], label=str(year), color='g', marker='.')
@@ -103,44 +101,48 @@ buffer = BytesIO()
 plt.savefig(buffer, format="png")
 buffer.seek(0)
 
-# Mostramos el gráfico en la app de Streamlit
-st.image(buffer, caption="Gráfico de dispersión TRM", use_column_width=True)
-
-# Botón para generar y descargar el reporte
+# Botón para generar y descargar el reporte en PDF
 if st.button("Generar y descargar reporte"):
-    # Creamos el documento Word
-    doc = Document()
-    doc.add_heading('Reporte de la TRM', level=1)
-    
+
+    # Creamos el documento PDF
+    pdf = FPDF()
+    pdf.add_page()
+
+    # Título centrado
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(200, 10, "Reporte de la TRM", ln=True, align="C")
+
+    # Agregar espacio
+    pdf.ln(10)
+
     # Hallamos los valores de interés
     valor_actual = df_extendido['valor'].iloc[-1]
     max_valor = df_extendido['valor'].max()
     min_valor = df_extendido['valor'].min()
     promedio_valor = df_extendido['valor'].mean()
 
-    # Añadimos al documento
-    doc.add_heading('Valores relevantes:', level=2)
-    doc.add_paragraph(f"El valor máximo alcanzado es: {max_valor}")
-    doc.add_paragraph(f"El valor mínimo alcanzado es: {min_valor}")
-    doc.add_paragraph(f"El valor promedio es: {promedio_valor}")
-    doc.add_paragraph(f"El último valor es: {valor_actual}")
+    # Agregamos los valores al PDF
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, f"El valor máximo alcanzado es: {max_valor}", ln=True)
+    pdf.cell(200, 10, f"El valor mínimo alcanzado es: {min_valor}", ln=True)
+    pdf.cell(200, 10, f"El valor promedio es: {promedio_valor}", ln=True)
+    pdf.cell(200, 10, f"El último valor es: {valor_actual}", ln=True)
 
-    # Agregamos la gráfica
-    doc.add_heading('Gráfico de TRM:', level=2)
-    doc.add_paragraph('Diagrama de dispersión Valor vs Fecha (Anual):')
-    
-    # Insertamos la imagen en el documento
-    doc.add_picture(buffer, width=Inches(4))
+    # Agregar espacio
+    pdf.ln(10)
 
-    # Guardamos el documento en memoria
-    byte_io = BytesIO()
-    doc.save(byte_io)
-    byte_io.seek(0)
+    # Insertar imagen del gráfico
+    pdf.image(buffer, x=10, y=pdf.get_y(), w=180)
 
-    # Descargar el archivo
+    # Guardamos el PDF en memoria
+    pdf_output = BytesIO()
+    pdf.output(pdf_output)
+    pdf_output.seek(0)
+
+    # Descargar el archivo PDF
     st.download_button(
         label="Descargar informe",
-        data=byte_io,
-        file_name=f"TRM_Reporte_{datetime.now().strftime('%Y-%m-%d')}.docx",
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        data=pdf_output,
+        file_name=f"TRM_Reporte_{datetime.now().strftime('%Y-%m-%d')}.pdf",
+        mime="application/pdf"
     )
