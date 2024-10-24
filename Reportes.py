@@ -45,8 +45,25 @@ def obtener_datos_trm():
 
     return df
 
+# Función para generar la gráfica
+def generar_grafica(df):
+    plt.figure(figsize=(10, 6))
+    plt.plot(df['vigenciadesde'], df['valor'], marker='o')
+    plt.title('Variación de la TRM a lo largo del tiempo')
+    plt.xlabel('Fecha')
+    plt.ylabel('TRM')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+    # Guardar la gráfica en un buffer en memoria
+    buffer = BytesIO()
+    plt.savefig(buffer, format="png")
+    buffer.seek(0)
+    
+    return buffer
+
 # Función para generar el PDF del reporte
-def generar_reporte_pdf(df):
+def generar_reporte_pdf(df, grafica_buffer):
     valor_actual = df['valor'].iloc[-1]
     valor_hace_un_dia = df['valor'].iloc[-2]
     valor_hace_una_semana = df['valor'].iloc[-7]
@@ -93,6 +110,10 @@ def generar_reporte_pdf(df):
     pdf.cell(200, 10, f"Semanal: {porcentaje_cambio_semanal:.2f}%", ln=True)
     pdf.cell(200, 10, f"Mensual: {porcentaje_cambio_mensual:.2f}%", ln=True)
 
+    # Insertar gráfica en el PDF
+    pdf.ln(10)
+    pdf.image(grafica_buffer, x=10, y=pdf.get_y(), w=180)
+
     # Guardar PDF
     fecha_actual = datetime.now().strftime("%Y-%m-%d")
     nombre_archivo = f"TRM_Reporte_{fecha_actual}.pdf"
@@ -103,7 +124,8 @@ def generar_reporte_pdf(df):
 # Botón para generar y descargar el informe
 if st.button("Generar y descargar informe"):
     df_trm = obtener_datos_trm()
-    nombre_reporte = generar_reporte_pdf(df_trm)
+    grafica_buffer = generar_grafica(df_trm)
+    nombre_reporte = generar_reporte_pdf(df_trm, grafica_buffer)
     
     with open(nombre_reporte, "rb") as file:
         st.download_button(
