@@ -42,9 +42,9 @@ def generar_grafica_corregida(df):
     # Dibujar cada segmento de línea de acuerdo a si sube (verde) o baja (rojo)
     for i in range(1, len(df)):
         if df['valor'].iloc[i] > df['valor'].iloc[i - 1]:
-            plt.plot(df['vigenciadesde'].iloc[i-1:i+1], df['valor'].iloc[i-1:i+1], color='green', marker='o')
-        else:
             plt.plot(df['vigenciadesde'].iloc[i-1:i+1], df['valor'].iloc[i-1:i+1], color='red', marker='o')
+        else:
+            plt.plot(df['vigenciadesde'].iloc[i-1:i+1], df['valor'].iloc[i-1:i+1], color='green', marker='o')
 
     plt.title('TRM de los últimos 30 días')
     plt.xlabel('Fecha')
