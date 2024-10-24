@@ -36,11 +36,28 @@ def obtener_datos_trm():
 # Función para generar la gráfica
 def generar_grafica(df):
     plt.figure(figsize=(10, 6))
-    plt.plot(df['vigenciadesde'], df['valor'], marker='o')
+    plt.plot(df['vigenciadesde'], df['valor'], marker='o', label='TRM')
     plt.title('Variación de la TRM a lo largo del tiempo')
     plt.xlabel('Fecha')
     plt.ylabel('TRM')
     plt.xticks(rotation=45)
+    
+    # Anotaciones para la fecha de inicio y final
+    fecha_inicio = df['vigenciadesde'].min()
+    fecha_final = df['vigenciadesde'].max()
+    valor_inicio = df['valor'].iloc[df['vigenciadesde'].idxmin()]
+    valor_final = df['valor'].iloc[df['vigenciadesde'].idxmax()]
+
+    plt.annotate(f'Inicio: {fecha_inicio.date()}\nValor: {valor_inicio:.2f}',
+                 xy=(fecha_inicio, valor_inicio),
+                 xytext=(fecha_inicio, valor_inicio + 1000),
+                 arrowprops=dict(facecolor='black', arrowstyle='->'))
+
+    plt.annotate(f'Final: {fecha_final.date()}\nValor: {valor_final:.2f}',
+                 xy=(fecha_final, valor_final),
+                 xytext=(fecha_final, valor_final + 1000),
+                 arrowprops=dict(facecolor='black', arrowstyle='->'))
+
     plt.tight_layout()
 
     # Guardar la gráfica como un archivo temporal
