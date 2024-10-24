@@ -35,28 +35,27 @@ def obtener_datos_trm():
         st.error(f"Error al obtener los datos: {response.status_code}")
         return pd.DataFrame()
 
-# Función para generar la gráfica con cambios de color
-def generar_grafica(df):
+# Función para generar la gráfica con cambios de color corregidos
+def generar_grafica_corregida(df):
     plt.figure(figsize=(10, 6))
 
-    # Cambiar color en función del aumento/disminución
-    colores = ['green' if df['valor'].iloc[i] > df['valor'].iloc[i - 1] else 'red' for i in range(1, len(df))]
-    colores.insert(0, 'green')  # Primer valor como referencia
-
-    plt.plot(df['vigenciadesde'], df['valor'], marker='o', label='TRM', color=colores[-1])
-    for i in range(len(df) - 1):
-        plt.plot(df['vigenciadesde'].iloc[i:i+2], df['valor'].iloc[i:i+2], color=colores[i])
+    # Dibujar cada segmento de línea de acuerdo a si sube (verde) o baja (rojo)
+    for i in range(1, len(df)):
+        if df['valor'].iloc[i] > df['valor'].iloc[i - 1]:
+            plt.plot(df['vigenciadesde'].iloc[i-1:i+1], df['valor'].iloc[i-1:i+1], color='green', marker='o')
+        else:
+            plt.plot(df['vigenciadesde'].iloc[i-1:i+1], df['valor'].iloc[i-1:i+1], color='red', marker='o')
 
     plt.title('TRM de los últimos 30 días')
     plt.xlabel('Fecha')
     plt.ylabel('TRM')
     plt.xticks(rotation=45)
 
-    # Configurar las etiquetas del eje X
+    # Ajustar el diseño para que las etiquetas no se solapen
     plt.tight_layout()
 
     # Guardar la gráfica como un archivo temporal
-    archivo_imagen = "grafica_trm.png"
+    archivo_imagen = "grafica_trm_corregida.png"
     plt.savefig(archivo_imagen, format="png")
     plt.close()  # Cerrar la figura para liberar memoria
     
@@ -129,23 +128,17 @@ def generar_reporte_pdf(df, grafica_archivo):
     
     return nombre_archivo
 
-# Función para previsualizar el informe
-def previsualizar_reporte(df):
-    valor_actual = df['valor'].iloc[0]
-    valor_hace_un_dia = df['valor'].iloc[1] if len(df) > 1 else valor_actual
-    porcentaje_cambio_dia = ((valor_actual - valor_hace_un_dia) / valor_hace_un_dia) * 100 if valor_hace_un_dia else 0
-    
-    color = "green" if porcentaje_cambio_dia > 0 else "red"
-    st.markdown(f"<h3>Valor Actual: <span style='color:{color}'>{valor_actual:.2f}</span></h3>", unsafe_allow_html=True)
-    st.markdown(f"<h4>Porcentaje de cambio respecto al día anterior: <span style='color:{color}'>{porcentaje_cambio_dia:.2f}%</span></h4>", unsafe_allow_html=True)
-
-# Botón para generar y descargar el informe
+# Previsualización de la gráfica y mostrar estadísticas antes del botón
 df_trm = obtener_datos_trm()
 if not df_trm.empty:
-    previsualizar_reporte(df_trm)
-    
-    if st.button("Generar y descargar informe"):
-        grafica_archivo = generar_grafica(df_trm)
+    grafica_archivo = generar_grafica_corregida(df_trm)
+
+    # Mostrar la gráfica en Streamlit antes del botón
+    st.image(grafica_archivo)
+
+# Botón para generar y descargar el informe
+if st.button("Generar y descargar informe"):
+    if not df_trm.empty:
         nombre_reporte = generar_reporte_pdf(df_trm, grafica_archivo)
         
         with open(nombre_reporte, "rb") as file:
