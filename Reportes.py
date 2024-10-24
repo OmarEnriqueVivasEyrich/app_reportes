@@ -8,10 +8,10 @@ from io import BytesIO
 import os
 
 # Título de la app
-st.title("Generación automática de reportes de la TRM")
+st.title("Generación automática de reportes de la TRM:")
 
 # Descripción debajo del título
-st.write("Esta aplicación obtiene datos de la TRM desde una API pública, analiza los valores obtenidos, y permite descargar un reporte en PDF con las estadísticas más importantes y variaciones de la TRM.")
+st.write("Esta aplicación obtiene datos de la TRM desde una API pública, analiza los valores obtenidos, y permite descargar un reporte en PDF con las estadísticas y variaciones más importantes de la TRM, además de una gráfica que muestra las fluctuaciones de los últimos 30 días.")
 
 # Función para obtener y procesar los datos de la API
 def obtener_datos_trm():
@@ -37,7 +37,7 @@ def obtener_datos_trm():
 def generar_grafica(df):
     plt.figure(figsize=(10, 6))
     plt.plot(df['vigenciadesde'], df['valor'], marker='o', label='TRM')
-    plt.title('Variación de la TRM a lo largo del tiempo')
+    plt.title('TRM de los últimos 30 días')
     plt.xlabel('Fecha')
     plt.ylabel('TRM')
     plt.xticks(rotation=45)
