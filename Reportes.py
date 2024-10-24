@@ -5,6 +5,7 @@ from fpdf import FPDF
 from datetime import datetime
 import matplotlib.pyplot as plt
 from io import BytesIO
+import os
 
 # Título de la app
 st.title("Generación automática de reportes de la TRM")
@@ -91,8 +92,9 @@ def generar_reporte_pdf(df, grafica_archivo):
     nombre_archivo = f"TRM_Reporte_{fecha_actual}.pdf"
     pdf.output(nombre_archivo)
     
-    # Eliminar el archivo de la gráfica temporal
-    os.remove(grafica_archivo)
+    # Eliminar el archivo de la gráfica temporal si existe
+    if os.path.exists(grafica_archivo):
+        os.remove(grafica_archivo)
     
     return nombre_archivo
 
