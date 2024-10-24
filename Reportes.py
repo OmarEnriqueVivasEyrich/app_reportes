@@ -64,6 +64,7 @@ def generar_grafica(df):
 
 # Función para generar el PDF del reporte
 def generar_reporte_pdf(df, grafica_archivo):
+    # Valores actuales y pasados
     valor_actual = df['valor'].iloc[0]  # Valor más reciente
     valor_hace_un_dia = df['valor'].iloc[1] if len(df) > 1 else valor_actual
     valor_hace_una_semana = df['valor'].iloc[7] if len(df) > 7 else valor_actual
@@ -74,6 +75,11 @@ def generar_reporte_pdf(df, grafica_archivo):
     promedio_valor = df['valor'].mean()
     mediana_valor = df['valor'].median()
 
+    # Calcular porcentajes de cambio
+    porcentaje_cambio_dia = ((valor_actual - valor_hace_un_dia) / valor_hace_un_dia) * 100 if valor_hace_un_dia else 0
+    porcentaje_cambio_semanal = ((valor_actual - valor_hace_una_semana) / valor_hace_una_semana) * 100 if valor_hace_una_semana else 0
+    porcentaje_cambio_mensual = ((valor_actual - valor_hace_un_mes) / valor_hace_un_mes) * 100 if valor_hace_un_mes else 0
+
     # Creación del PDF
     pdf = FPDF()
     pdf.add_page()
@@ -83,9 +89,10 @@ def generar_reporte_pdf(df, grafica_archivo):
     pdf.cell(200, 10, "Reporte de la TRM", ln=True, align='C')
     pdf.ln(10)
 
-    # Valores relevantes
+    # Estadísticas relevantes
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(200, 10, "Estadísticas relevantes:", ln=True)
     pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, "Valores relevantes:", ln=True)
     pdf.cell(200, 10, f"Valor máximo: {max_valor:.2f}", ln=True)
     pdf.cell(200, 10, f"Valor mínimo: {min_valor:.2f}", ln=True)
     pdf.cell(200, 10, f"Valor promedio: {promedio_valor:.2f}", ln=True)
@@ -95,8 +102,20 @@ def generar_reporte_pdf(df, grafica_archivo):
     pdf.cell(200, 10, f"Valor hace una semana: {valor_hace_una_semana:.2f}", ln=True)
     pdf.cell(200, 10, f"Valor hace un mes: {valor_hace_un_mes:.2f}", ln=True)
 
+    # Cambios porcentuales
+    pdf.ln(10)
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(200, 10, "Cambios porcentuales:", ln=True)
+    pdf.set_font("Arial", size=12)
+
+    pdf.cell(200, 10, f"Porcentaje de cambio respecto al día anterior: {porcentaje_cambio_dia:.2f}%", ln=True)
+    pdf.cell(200, 10, f"Porcentaje de cambio respecto a la semana anterior: {porcentaje_cambio_semanal:.2f}%", ln=True)
+    pdf.cell(200, 10, f"Porcentaje de cambio respecto al mes anterior: {porcentaje_cambio_mensual:.2f}%", ln=True)
+
     # Insertar gráfica en el PDF
     pdf.ln(10)
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(200, 10, "Gráfico de la TRM:", ln=True)
     pdf.image(grafica_archivo, x=10, y=pdf.get_y(), w=180)
 
     # Guardar PDF
