@@ -86,7 +86,7 @@ def generar_reporte_pdf(df, grafica_archivo):
 
     # Título del documento
     pdf.set_font("Arial", 'B', 16)
-    pdf.cell(200, 10, "Reporte de la TRM", ln=True, align='C')
+    pdf.cell(200, 10, "Reporte de la TRM con datos del último mes", ln=True, align='C')
     pdf.ln(10)
 
     # Estadísticas relevantes
