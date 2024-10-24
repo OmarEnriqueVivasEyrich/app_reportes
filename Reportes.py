@@ -7,7 +7,12 @@ from datetime import datetime
 from fpdf import FPDF
 
 # Título de la aplicación
-st.title("Generación automática de reportes de la TRM")
+st.title("Generación automática de reportes de la TRM:")
+
+# Descripción debajo del título
+st.write(" ")
+st.write("Esta aplicación obtiene datos de la TRM desde una API pública, analiza los valores obtenidos, y permite descargar un reporte en PDF con los porcentajes de cambio más importantes de la TRM, además de un gráfico para ilustrar los movimientos de la TRM.")
+st.write(" ")
 
 # Colocamos la URL de la API
 url = "https://www.datos.gov.co/resource/ceyp-9c7c.json"
