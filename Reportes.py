@@ -1,49 +1,36 @@
 import streamlit as st
-import requests
 import pandas as pd
+import requests
+from fpdf import FPDF
+from datetime import datetime
 import matplotlib.pyplot as plt
 from io import BytesIO
-from datetime import datetime
-from fpdf import FPDF
 
-# Título de la aplicación
-st.title("Generación automática de reportes de la TRM:")
+# Título de la app
+st.title("Generación automática de reportes de la TRM")
 
 # Descripción debajo del título
-st.write(" ")
-st.write("Esta aplicación obtiene datos de la TRM desde una API pública, analiza los valores obtenidos, y permite descargar un reporte en PDF con los porcentajes de cambio más importantes de la TRM, además de un gráfico para ilustrar los movimientos de la TRM.")
-st.write(" ")
+st.write("Esta aplicación obtiene datos de la TRM desde una API pública, analiza los valores obtenidos, y permite descargar un reporte en PDF con las estadísticas más importantes y variaciones de la TRM.")
 
 # Función para obtener y procesar los datos de la API
 def obtener_datos_trm():
     url = "https://www.datos.gov.co/resource/ceyp-9c7c.json"
-    df = pd.DataFrame()
-    limit = 10000
-    offset = 0
-
-    while True:
-        params = {"$limit": limit, "$offset": offset}
-        response = requests.get(url, params=params)
-        
-        if response.status_code == 200:
-            data = response.json()
-            temp_df = pd.DataFrame(data)
-            if temp_df.empty:
-                break
-            df = pd.concat([df, temp_df], ignore_index=True)
-            offset += limit
-        else:
-            st.error(f"Error al obtener los datos: {response.status_code}")
-            break
-
-    # Procesamiento de fechas y valores
-    df['vigenciadesde'] = pd.to_datetime(df['vigenciadesde'])
-    df['vigenciahasta'] = pd.to_datetime(df['vigenciahasta'])
-    df['vigenciadesde'] = df['vigenciadesde'].dt.strftime('%Y-%m-%d')
-    df['vigenciahasta'] = df['vigenciahasta'].dt.strftime('%Y-%m-%d')
-    df['valor'] = df['valor'].astype(float)
-
-    return df
+    
+    # Obtener solo los últimos 30 días de datos
+    params = {
+        "$order": "vigenciadesde DESC",
+        "$limit": 30  # Limitar a los últimos 30 registros
+    }
+    response = requests.get(url, params=params)
+    
+    if response.status_code == 200:
+        df = pd.DataFrame(response.json())
+        df['vigenciadesde'] = pd.to_datetime(df['vigenciadesde'])
+        df['valor'] = df['valor'].astype(float)
+        return df
+    else:
+        st.error(f"Error al obtener los datos: {response.status_code}")
+        return pd.DataFrame()
 
 # Función para generar la gráfica
 def generar_grafica(df):
@@ -64,23 +51,15 @@ def generar_grafica(df):
 
 # Función para generar el PDF del reporte
 def generar_reporte_pdf(df, grafica_buffer):
-    valor_actual = df['valor'].iloc[-1]
-    valor_hace_un_dia = df['valor'].iloc[-2]
-    valor_hace_una_semana = df['valor'].iloc[-7]
-    valor_hace_un_mes = df['valor'].iloc[-30]
+    valor_actual = df['valor'].iloc[0]  # Valor más reciente
+    valor_hace_un_dia = df['valor'].iloc[1] if len(df) > 1 else valor_actual
+    valor_hace_una_semana = df['valor'].iloc[7] if len(df) > 7 else valor_actual
+    valor_hace_un_mes = df['valor'].iloc[30] if len(df) > 30 else valor_actual
 
     max_valor = df['valor'].max()
     min_valor = df['valor'].min()
     promedio_valor = df['valor'].mean()
     mediana_valor = df['valor'].median()
-
-    diferencia_diaria_valor = valor_actual - valor_hace_un_dia
-    diferencia_semanal_valor = valor_actual - valor_hace_una_semana
-    diferencia_mensual_valor = valor_actual - valor_hace_un_mes
-
-    porcentaje_cambio_dia = (diferencia_diaria_valor / valor_hace_un_dia) * 100
-    porcentaje_cambio_semanal = (diferencia_semanal_valor / valor_hace_una_semana) * 100
-    porcentaje_cambio_mensual = (diferencia_mensual_valor / valor_hace_un_mes) * 100
 
     # Creación del PDF
     pdf = FPDF()
@@ -103,13 +82,6 @@ def generar_reporte_pdf(df, grafica_buffer):
     pdf.cell(200, 10, f"Valor hace una semana: {valor_hace_una_semana:.2f}", ln=True)
     pdf.cell(200, 10, f"Valor hace un mes: {valor_hace_un_mes:.2f}", ln=True)
 
-    # Porcentajes de cambio
-    pdf.ln(10)
-    pdf.cell(200, 10, "Porcentaje de cambio:", ln=True)
-    pdf.cell(200, 10, f"Diario: {porcentaje_cambio_dia:.2f}%", ln=True)
-    pdf.cell(200, 10, f"Semanal: {porcentaje_cambio_semanal:.2f}%", ln=True)
-    pdf.cell(200, 10, f"Mensual: {porcentaje_cambio_mensual:.2f}%", ln=True)
-
     # Insertar gráfica en el PDF
     pdf.ln(10)
     pdf.image(grafica_buffer, x=10, y=pdf.get_y(), w=180)
@@ -124,13 +96,14 @@ def generar_reporte_pdf(df, grafica_buffer):
 # Botón para generar y descargar el informe
 if st.button("Generar y descargar informe"):
     df_trm = obtener_datos_trm()
-    grafica_buffer = generar_grafica(df_trm)
-    nombre_reporte = generar_reporte_pdf(df_trm, grafica_buffer)
-    
-    with open(nombre_reporte, "rb") as file:
-        st.download_button(
-            label="Descargar Reporte PDF",
-            data=file,
-            file_name=nombre_reporte,
-            mime="application/pdf"
-        )
+    if not df_trm.empty:
+        grafica_buffer = generar_grafica(df_trm)
+        nombre_reporte = generar_reporte_pdf(df_trm, grafica_buffer)
+        
+        with open(nombre_reporte, "rb") as file:
+            st.download_button(
+                label="Descargar Reporte PDF",
+                data=file,
+                file_name=nombre_reporte,
+                mime="application/pdf"
+            )
