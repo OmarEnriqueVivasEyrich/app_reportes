@@ -14,140 +14,101 @@ st.write(" ")
 st.write("Esta aplicación obtiene datos de la TRM desde una API pública, analiza los valores obtenidos, y permite descargar un reporte en PDF con los porcentajes de cambio más importantes de la TRM, además de un gráfico para ilustrar los movimientos de la TRM.")
 st.write(" ")
 
-# Colocamos la URL de la API
-url = "https://www.datos.gov.co/resource/ceyp-9c7c.json"
+# Función para obtener y procesar los datos de la API
+def obtener_datos_trm():
+    url = "https://www.datos.gov.co/resource/ceyp-9c7c.json"
+    df = pd.DataFrame()
+    limit = 10000
+    offset = 0
 
-# Inicializamos el DataFrame vacío
-df = pd.DataFrame()
-
-# Colocamos los parámetros de la extracción
-limit = 10000
-offset = 0
-
-while True:
-    params = {
-        "$limit": limit,
-        "$offset": offset
-    }
-
-    # Hacemos la solicitud GET a la API con los parámetros de la extracción
-    response = requests.get(url, params=params)
-    
-    # Verificamos si la solicitud fue exitosa
-    if response.status_code == 200:
-        # Convertimos la respuesta en JSON
-        data = response.json()
+    while True:
+        params = {"$limit": limit, "$offset": offset}
+        response = requests.get(url, params=params)
         
-        # Convertimos los datos a un DataFrame temporal
-        temp_df = pd.DataFrame(data)
-        
-        if temp_df.empty:
+        if response.status_code == 200:
+            data = response.json()
+            temp_df = pd.DataFrame(data)
+            if temp_df.empty:
+                break
+            df = pd.concat([df, temp_df], ignore_index=True)
+            offset += limit
+        else:
+            st.error(f"Error al obtener los datos: {response.status_code}")
             break
-        
-        # Concatenamos los datos al DataFrame principal
-        df = pd.concat([df, temp_df], ignore_index=True)
-        
-        offset += limit
-    else:
-        st.error(f"Error al obtener los datos: {response.status_code}")
-        break
 
-# Convertimos las columnas de fecha a datetime
-df['vigenciadesde'] = pd.to_datetime(df['vigenciadesde'])
-df['vigenciahasta'] = pd.to_datetime(df['vigenciahasta'])
+    # Procesamiento de fechas y valores
+    df['vigenciadesde'] = pd.to_datetime(df['vigenciadesde'])
+    df['vigenciahasta'] = pd.to_datetime(df['vigenciahasta'])
+    df['vigenciadesde'] = df['vigenciadesde'].dt.strftime('%Y-%m-%d')
+    df['vigenciahasta'] = df['vigenciahasta'].dt.strftime('%Y-%m-%d')
+    df['valor'] = df['valor'].astype(float)
 
-# Formateamos las fechas en el formato 'YYYY-MM-DD'
-df['vigenciadesde'] = df['vigenciadesde'].dt.strftime('%Y-%m-%d')
-df['vigenciahasta'] = df['vigenciahasta'].dt.strftime('%Y-%m-%d')
+    return df
 
-# Extendemos el dataframe
-df_extendido = df.copy()
-new_rows = []
-for index, row in df_extendido.iterrows():
-    vigenciadesde = pd.to_datetime(row['vigenciadesde'])
-    vigenciahasta = pd.to_datetime(row['vigenciahasta'])
-    
-    if vigenciahasta > vigenciadesde:
-        for day in pd.date_range(start=vigenciadesde, end=vigenciahasta):
-            new_row = row.to_dict()
-            new_row['vigenciadesde'] = day
-            new_row['vigenciahasta'] = day
-            new_rows.append(new_row)
-    else:
-        new_rows.append(row.to_dict())
+# Función para generar el PDF del reporte
+def generar_reporte_pdf(df):
+    valor_actual = df['valor'].iloc[-1]
+    valor_hace_un_dia = df['valor'].iloc[-2]
+    valor_hace_una_semana = df['valor'].iloc[-7]
+    valor_hace_un_mes = df['valor'].iloc[-30]
 
-df_extendido = pd.DataFrame(new_rows)
+    max_valor = df['valor'].max()
+    min_valor = df['valor'].min()
+    promedio_valor = df['valor'].mean()
+    mediana_valor = df['valor'].median()
 
-# Renombramos y eliminamos columnas
-df_extendido = df_extendido.rename(columns={'vigenciadesde': 'fecha'})
-df_extendido = df_extendido.drop('vigenciahasta', axis=1)
+    diferencia_diaria_valor = valor_actual - valor_hace_un_dia
+    diferencia_semanal_valor = valor_actual - valor_hace_una_semana
+    diferencia_mensual_valor = valor_actual - valor_hace_un_mes
 
-# Convertimos la columna 'valor' a tipo float
-df_extendido['valor'] = df_extendido['valor'].astype(float)
+    porcentaje_cambio_dia = (diferencia_diaria_valor / valor_hace_un_dia) * 100
+    porcentaje_cambio_semanal = (diferencia_semanal_valor / valor_hace_una_semana) * 100
+    porcentaje_cambio_mensual = (diferencia_mensual_valor / valor_hace_un_mes) * 100
 
-# Agrupamos por año
-df_extendido['fecha'] = pd.to_datetime(df_extendido['fecha'])
-df_extendido['year'] = df_extendido['fecha'].dt.year
-grouped = df_extendido.groupby('year')
-
-# Preparamos el gráfico (sin mostrarlo en la app)
-plt.figure(figsize=(10, 6))
-for year, group in grouped:
-    plt.scatter(group['fecha'], group['valor'], label=str(year), color='g', marker='.')
-
-plt.xlabel('Fecha')
-plt.ylabel('Valor')
-plt.title('Diagrama de Dispersión Valor vs Fecha (Anual)')
-plt.grid(True)
-plt.tight_layout()
-
-# Guardamos el gráfico en un archivo temporal
-buffer = BytesIO()
-plt.savefig(buffer, format="png")
-buffer.seek(0)
-
-# Botón para generar y descargar el reporte en PDF
-if st.button("Generar y descargar reporte"):
-
-    # Creamos el documento PDF
+    # Creación del PDF
     pdf = FPDF()
     pdf.add_page()
 
-    # Título centrado
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(200, 10, "Reporte de la TRM", ln=True, align="C")
-
-    # Agregar espacio
+    # Título del documento
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(200, 10, "Reporte de la TRM", ln=True, align='C')
     pdf.ln(10)
 
-    # Hallamos los valores de interés
-    valor_actual = df_extendido['valor'].iloc[-1]
-    max_valor = df_extendido['valor'].max()
-    min_valor = df_extendido['valor'].min()
-    promedio_valor = df_extendido['valor'].mean()
-
-    # Agregamos los valores al PDF
+    # Valores relevantes
     pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, f"El valor máximo alcanzado es: {max_valor}", ln=True)
-    pdf.cell(200, 10, f"El valor mínimo alcanzado es: {min_valor}", ln=True)
-    pdf.cell(200, 10, f"El valor promedio es: {promedio_valor}", ln=True)
-    pdf.cell(200, 10, f"El último valor es: {valor_actual}", ln=True)
+    pdf.cell(200, 10, "Valores relevantes:", ln=True)
+    pdf.cell(200, 10, f"Valor máximo: {max_valor:.2f}", ln=True)
+    pdf.cell(200, 10, f"Valor mínimo: {min_valor:.2f}", ln=True)
+    pdf.cell(200, 10, f"Valor promedio: {promedio_valor:.2f}", ln=True)
+    pdf.cell(200, 10, f"Mediana: {mediana_valor:.2f}", ln=True)
+    pdf.cell(200, 10, f"Último valor: {valor_actual:.2f}", ln=True)
+    pdf.cell(200, 10, f"Valor hace un día: {valor_hace_un_dia:.2f}", ln=True)
+    pdf.cell(200, 10, f"Valor hace una semana: {valor_hace_una_semana:.2f}", ln=True)
+    pdf.cell(200, 10, f"Valor hace un mes: {valor_hace_un_mes:.2f}", ln=True)
 
-    # Agregar espacio
+    # Porcentajes de cambio
     pdf.ln(10)
+    pdf.cell(200, 10, "Porcentaje de cambio:", ln=True)
+    pdf.cell(200, 10, f"Diario: {porcentaje_cambio_dia:.2f}%", ln=True)
+    pdf.cell(200, 10, f"Semanal: {porcentaje_cambio_semanal:.2f}%", ln=True)
+    pdf.cell(200, 10, f"Mensual: {porcentaje_cambio_mensual:.2f}%", ln=True)
 
-    # Insertar imagen del gráfico
-    pdf.image(buffer, x=10, y=pdf.get_y(), w=180)
+    # Guardar PDF
+    fecha_actual = datetime.now().strftime("%Y-%m-%d")
+    nombre_archivo = f"TRM_Reporte_{fecha_actual}.pdf"
+    pdf.output(nombre_archivo)
+    
+    return nombre_archivo
 
-    # Guardamos el PDF en memoria
-    pdf_output = BytesIO()
-    pdf.output(pdf_output)
-    pdf_output.seek(0)
-
-    # Descargar el archivo PDF
-    st.download_button(
-        label="Descargar informe",
-        data=pdf_output,
-        file_name=f"TRM_Reporte_{datetime.now().strftime('%Y-%m-%d')}.pdf",
-        mime="application/pdf"
-    )
+# Botón para generar y descargar el informe
+if st.button("Generar y descargar informe"):
+    df_trm = obtener_datos_trm()
+    nombre_reporte = generar_reporte_pdf(df_trm)
+    
+    with open(nombre_reporte, "rb") as file:
+        st.download_button(
+            label="Descargar Reporte PDF",
+            data=file,
+            file_name=nombre_reporte,
+            mime="application/pdf"
+        )
