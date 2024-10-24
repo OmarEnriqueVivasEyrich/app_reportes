@@ -41,22 +41,15 @@ def generar_grafica(df):
     plt.xlabel('Fecha')
     plt.ylabel('TRM')
     plt.xticks(rotation=45)
-    
-    # Anotaciones para la fecha de inicio y final
+
+    # Definir las fechas para el eje X
     fecha_inicio = df['vigenciadesde'].min()
     fecha_final = df['vigenciadesde'].max()
-    valor_inicio = df['valor'].iloc[df['vigenciadesde'].idxmin()]
-    valor_final = df['valor'].iloc[df['vigenciadesde'].idxmax()]
+    fecha_media = df['vigenciadesde'].median()
 
-    plt.annotate(f'Inicio: {fecha_inicio.date()}\nValor: {valor_inicio:.2f}',
-                 xy=(fecha_inicio, valor_inicio),
-                 xytext=(fecha_inicio, valor_inicio + 1000),
-                 arrowprops=dict(facecolor='black', arrowstyle='->'))
-
-    plt.annotate(f'Final: {fecha_final.date()}\nValor: {valor_final:.2f}',
-                 xy=(fecha_final, valor_final),
-                 xytext=(fecha_final, valor_final + 1000),
-                 arrowprops=dict(facecolor='black', arrowstyle='->'))
+    # Configurar las etiquetas del eje X
+    plt.xticks([fecha_inicio, fecha_media, fecha_final], 
+               [fecha_inicio.date(), fecha_media.date(), fecha_final.date()])
 
     plt.tight_layout()
 
