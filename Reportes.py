@@ -42,15 +42,15 @@ def generar_grafica(df):
     plt.xticks(rotation=45)
     plt.tight_layout()
 
-    # Guardar la gráfica en un buffer en memoria
-    buffer = BytesIO()
-    plt.savefig(buffer, format="png")
-    buffer.seek(0)
+    # Guardar la gráfica como un archivo temporal
+    archivo_imagen = "grafica_trm.png"
+    plt.savefig(archivo_imagen, format="png")
+    plt.close()  # Cerrar la figura para liberar memoria
     
-    return buffer
+    return archivo_imagen
 
 # Función para generar el PDF del reporte
-def generar_reporte_pdf(df, grafica_buffer):
+def generar_reporte_pdf(df, grafica_archivo):
     valor_actual = df['valor'].iloc[0]  # Valor más reciente
     valor_hace_un_dia = df['valor'].iloc[1] if len(df) > 1 else valor_actual
     valor_hace_una_semana = df['valor'].iloc[7] if len(df) > 7 else valor_actual
@@ -84,12 +84,15 @@ def generar_reporte_pdf(df, grafica_buffer):
 
     # Insertar gráfica en el PDF
     pdf.ln(10)
-    pdf.image(grafica_buffer, x=10, y=pdf.get_y(), w=180)
+    pdf.image(grafica_archivo, x=10, y=pdf.get_y(), w=180)
 
     # Guardar PDF
     fecha_actual = datetime.now().strftime("%Y-%m-%d")
     nombre_archivo = f"TRM_Reporte_{fecha_actual}.pdf"
     pdf.output(nombre_archivo)
+    
+    # Eliminar el archivo de la gráfica temporal
+    os.remove(grafica_archivo)
     
     return nombre_archivo
 
@@ -97,8 +100,8 @@ def generar_reporte_pdf(df, grafica_buffer):
 if st.button("Generar y descargar informe"):
     df_trm = obtener_datos_trm()
     if not df_trm.empty:
-        grafica_buffer = generar_grafica(df_trm)
-        nombre_reporte = generar_reporte_pdf(df_trm, grafica_buffer)
+        grafica_archivo = generar_grafica(df_trm)
+        nombre_reporte = generar_reporte_pdf(df_trm, grafica_archivo)
         
         with open(nombre_reporte, "rb") as file:
             st.download_button(
