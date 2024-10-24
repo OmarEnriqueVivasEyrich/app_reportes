@@ -138,7 +138,7 @@ if not df_trm.empty:
     valor_hace_un_dia = df_trm['valor'].iloc[1] if len(df_trm) > 1 else valor_actual
     porcentaje_cambio_dia = ((valor_actual - valor_hace_un_dia) / valor_hace_un_dia) * 100 if valor_hace_un_dia else 0
 
-    color = "red" if porcentaje_cambio_dia > 0 else "green"
+    color = "green" if porcentaje_cambio_dia > 0 else "red"
     
     st.markdown(f"<h3>Valor Actual: <span style='color:{color}'>{valor_actual:.2f}</span></h3>", unsafe_allow_html=True)
     st.markdown(f"<h4>Porcentaje de cambio respecto al día anterior: <span style='color:{color}'>{porcentaje_cambio_dia:.2f}%</span></h4>", unsafe_allow_html=True)
