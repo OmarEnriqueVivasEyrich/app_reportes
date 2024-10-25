@@ -101,15 +101,24 @@ def generar_reporte_pdf(df, grafica_archivo):
     pdf.cell(200, 10, f"Valor hace una semana: {valor_hace_una_semana:.2f}", ln=True)
     pdf.cell(200, 10, f"Valor hace un mes: {valor_hace_un_mes:.2f}", ln=True)
 
-    # Cambios porcentuales
+    # Cambios porcentuales con colores
+    def agregar_porcentaje(pdf, descripcion, valor):
+        pdf.cell(200, 10, descripcion, ln=False)
+        if valor > 0:
+            pdf.set_text_color(0, 255, 0)  # Verde
+        else:
+            pdf.set_text_color(255, 0, 0)  # Rojo
+        pdf.cell(0, 10, f"{valor:.2f}%", ln=True)
+        pdf.set_text_color(0, 0, 0)  # Volver al color negro para el resto del texto
+
     pdf.ln(10)
     pdf.set_font("Arial", 'B', 14)
     pdf.cell(200, 10, "Cambios porcentuales:", ln=True)
     pdf.set_font("Arial", size=12)
 
-    pdf.cell(200, 10, f"Porcentaje de cambio respecto al día anterior: {porcentaje_cambio_dia:.2f}%", ln=True)
-    pdf.cell(200, 10, f"Porcentaje de cambio respecto a la semana anterior: {porcentaje_cambio_semanal:.2f}%", ln=True)
-    pdf.cell(200, 10, f"Porcentaje de cambio respecto al mes anterior: {porcentaje_cambio_mensual:.2f}%", ln=True)
+    agregar_porcentaje(pdf, "Porcentaje de cambio respecto al día anterior: ", porcentaje_cambio_dia)
+    agregar_porcentaje(pdf, "Porcentaje de cambio respecto a la semana anterior: ", porcentaje_cambio_semanal)
+    agregar_porcentaje(pdf, "Porcentaje de cambio respecto al mes anterior: ", porcentaje_cambio_mensual)
 
     # Insertar gráfica en el PDF
     pdf.ln(10)
@@ -159,5 +168,5 @@ if st.button("Generar y descargar informe"):
                 label="Descargar Reporte PDF",
                 data=file,
                 file_name=nombre_reporte,
-                mime="application/pdf"
+                mime="application/octet-stream",
             )
