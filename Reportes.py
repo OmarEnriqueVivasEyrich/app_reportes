@@ -4,6 +4,7 @@ import requests
 from fpdf import FPDF
 from datetime import datetime
 import matplotlib.pyplot as plt
+from io import BytesIO
 import os
 
 # Título de la app
@@ -60,20 +61,6 @@ def generar_grafica_corregida(df):
     
     return archivo_imagen
 
-# Función auxiliar para agregar el porcentaje con color en el PDF
-def agregar_porcentaje_coloreado(pdf, descripcion, valor):
-    # Asignar color basado en el valor
-    if valor >= 0:
-        pdf.set_text_color(0, 255, 0)  # Verde para aumento
-    else:
-        pdf.set_text_color(255, 0, 0)  # Rojo para disminución
-
-    # Insertar el texto en el PDF
-    pdf.cell(200, 10, f"{descripcion}: {valor:.2f}%", ln=True)
-    
-    # Restaurar el color a negro para el siguiente texto
-    pdf.set_text_color(0, 0, 0)
-
 # Función para generar el PDF del reporte
 def generar_reporte_pdf(df, grafica_archivo):
     # Valores actuales y pasados
@@ -120,10 +107,9 @@ def generar_reporte_pdf(df, grafica_archivo):
     pdf.cell(200, 10, "Cambios porcentuales:", ln=True)
     pdf.set_font("Arial", size=12)
 
-    # Insertar los porcentajes de cambio con color
-    agregar_porcentaje_coloreado(pdf, "Porcentaje de cambio respecto al día anterior", porcentaje_cambio_dia)
-    agregar_porcentaje_coloreado(pdf, "Porcentaje de cambio respecto a la semana anterior", porcentaje_cambio_semanal)
-    agregar_porcentaje_coloreado(pdf, "Porcentaje de cambio respecto al mes anterior", porcentaje_cambio_mensual)
+    pdf.cell(200, 10, f"Porcentaje de cambio respecto al día anterior: {porcentaje_cambio_dia:.2f}%", ln=True)
+    pdf.cell(200, 10, f"Porcentaje de cambio respecto a la semana anterior: {porcentaje_cambio_semanal:.2f}%", ln=True)
+    pdf.cell(200, 10, f"Porcentaje de cambio respecto al mes anterior: {porcentaje_cambio_mensual:.2f}%", ln=True)
 
     # Insertar gráfica en el PDF
     pdf.ln(10)
@@ -143,6 +129,7 @@ def generar_reporte_pdf(df, grafica_archivo):
     return nombre_archivo
 
 # Previsualización de la gráfica y mostrar estadísticas antes del botón
+
 df_trm = obtener_datos_trm()
 
 if not df_trm.empty:
@@ -166,5 +153,11 @@ if not df_trm.empty:
 if st.button("Generar y descargar informe"):
     if not df_trm.empty:
         nombre_reporte = generar_reporte_pdf(df_trm, grafica_archivo)
+        
         with open(nombre_reporte, "rb") as file:
-            st.download_button(label="Descargar Informe PDF", data=file, file_name=nombre_reporte, mime="application/pdf")
+            st.download_button(
+                label="Descargar Reporte PDF",
+                data=file,
+                file_name=nombre_reporte,
+                mime="application/pdf"
+            )
