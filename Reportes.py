@@ -66,9 +66,9 @@ def generar_grafica_corregida(df):
 def generar_reporte_pdf(df, grafica_archivo):
     # Definir los valores actuales y pasados
     valor_actual = df['valor'].iloc[0]  # Valor más reciente
-    valor_hace_un_dia = df['valor'].iloc[1] if len(df) > 1 else valor_actual
-    valor_hace_una_semana = df['valor'].iloc[6] if len(df) > 7 else valor_actual
-    valor_hace_un_mes = df['valor'].iloc[29] if len(df) > 30 else valor_actual
+    valor_hace_un_dia = df['valor'].iloc[1]
+    valor_hace_una_semana = df['valor'].iloc[6]
+    valor_hace_un_mes = df['valor'].iloc[29]
 
     # Calcular estadísticas clave
     max_valor = df['valor'].max()
