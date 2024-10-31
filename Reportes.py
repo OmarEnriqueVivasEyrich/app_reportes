@@ -35,22 +35,30 @@ def obtener_datos_trm():
         st.error(f"Error al obtener los datos: {response.status_code}")
         return pd.DataFrame()
 
-# Crear una función para generar la gráfica con cambios de color según fluctuación
+# Crear una función para generar la gráfica con cuadrícula y fechas relevantes
 def generar_grafica_corregida(df):
     plt.figure(figsize=(10, 6))
 
     # Dibujar cada segmento de línea en función de si el valor sube (verde) o baja (rojo)
     for i in range(1, len(df)):
-        if df['valor'].iloc[i] > df['valor'].iloc[i - 1]:
-            plt.plot(df['vigenciadesde'].iloc[i-1:i+1], df['valor'].iloc[i-1:i+1], color='red', marker='o')
-        else:
-            plt.plot(df['vigenciadesde'].iloc[i-1:i+1], df['valor'].iloc[i-1:i+1], color='green', marker='o')
+        color = 'red' if df['valor'].iloc[i] > df['valor'].iloc[i - 1] else 'green'
+        plt.plot(df['vigenciadesde'].iloc[i-1:i+1], df['valor'].iloc[i-1:i+1], color=color, marker='o')
 
     # Establecer el título y las etiquetas de los ejes
     plt.title('TRM de los últimos 30 días')
     plt.xlabel('Fecha')
     plt.ylabel('TRM')
     plt.xticks(rotation=45)
+    plt.grid(True)  # Añadir cuadrícula
+
+    # Agregar tres fechas relevantes al eje x
+    primera_fecha = df['vigenciadesde'].iloc[-1]
+    fecha_intermedia = df['vigenciadesde'].iloc[len(df) // 2]
+    ultima_fecha = df['vigenciadesde'].iloc[0]
+    plt.xticks([primera_fecha, fecha_intermedia, ultima_fecha], 
+               [primera_fecha.strftime('%Y-%m-%d'), 
+                fecha_intermedia.strftime('%Y-%m-%d'), 
+                ultima_fecha.strftime('%Y-%m-%d')])
 
     # Ajustar el diseño para evitar el solapamiento de etiquetas
     plt.tight_layout()
@@ -130,7 +138,6 @@ def generar_reporte_pdf(df, grafica_archivo):
     return nombre_archivo
 
 # Previsualizar la gráfica y mostrar estadísticas antes del botón
-
 df_trm = obtener_datos_trm()
 
 if not df_trm.empty:
